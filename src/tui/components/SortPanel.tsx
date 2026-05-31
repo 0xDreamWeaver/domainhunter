@@ -97,7 +97,7 @@ export default function SortPanel({ sort, onApply, onCancel }: SortPanelProps) {
       <Text bold>Primary Sort</Text>
       <Box marginLeft={2} marginBottom={1} flexDirection="column">
         <Text color={isActive('primary-field') ? 'cyan' : 'white'}>
-          {isActive('primary-field') ? '▶ ' : '  '}Field: {' '}
+          {isActive('primary-field') ? '> ' : '  '}Field: {' '}
           {FIELDS.map(f => (
             <Text key={f.value} color={primaryField === f.value ? 'cyan' : 'gray'}>
               {primaryField === f.value ? `[${f.label}] ` : `${f.label} `}
@@ -105,7 +105,7 @@ export default function SortPanel({ sort, onApply, onCancel }: SortPanelProps) {
           ))}
         </Text>
         <Text color={isActive('primary-dir') ? 'cyan' : 'white'}>
-          {isActive('primary-dir') ? '▶ ' : '  '}Direction:{' '}
+          {isActive('primary-dir') ? '> ' : '  '}Direction:{' '}
           {DIRECTIONS.map(d => (
             <Text key={d.value} color={primaryDir === d.value ? 'cyan' : 'gray'}>
               {primaryDir === d.value ? `[${d.label}] ` : `${d.label} `}
@@ -117,7 +117,7 @@ export default function SortPanel({ sort, onApply, onCancel }: SortPanelProps) {
       <Text bold>Secondary Sort (optional)</Text>
       <Box marginLeft={2} flexDirection="column">
         <Text color={isActive('secondary-field') ? 'cyan' : 'white'}>
-          {isActive('secondary-field') ? '▶ ' : '  '}Field:{' '}
+          {isActive('secondary-field') ? '> ' : '  '}Field:{' '}
           <Text color={secondaryField == null ? 'cyan' : 'gray'}>{secondaryField == null ? '[none] ' : 'none '}</Text>
           {FIELDS.map(f => (
             <Text key={f.value} color={secondaryField === f.value ? 'cyan' : 'gray'}>
@@ -127,7 +127,7 @@ export default function SortPanel({ sort, onApply, onCancel }: SortPanelProps) {
         </Text>
         {secondaryField && (
           <Text color={isActive('secondary-dir') ? 'cyan' : 'white'}>
-            {isActive('secondary-dir') ? '▶ ' : '  '}Direction:{' '}
+            {isActive('secondary-dir') ? '> ' : '  '}Direction:{' '}
             {DIRECTIONS.map(d => (
               <Text key={d.value} color={secondaryDir === d.value ? 'cyan' : 'gray'}>
                 {secondaryDir === d.value ? `[${d.label}] ` : `${d.label} `}

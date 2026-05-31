@@ -20,10 +20,7 @@ export default function FilterPanel({ filter, onApply, onCancel }: FilterPanelPr
   const [focus, setFocus] = useState<FocusField>('status');
 
   useInput((input, key) => {
-    if (key.escape) {
-      onCancel();
-      return;
-    }
+    if (key.escape) { onCancel(); return; }
 
     if (key.return) {
       if (focus === 'status') {
@@ -72,10 +69,9 @@ export default function FilterPanel({ filter, onApply, onCancel }: FilterPanelPr
       <Text bold color="cyan">Filter Domains</Text>
       <Text> </Text>
 
-      {/* Status filter */}
       <Box flexDirection="column" marginBottom={1}>
         <Text {...fieldStyle('status')}>
-          {focus === 'status' ? '▶ ' : '  '}Availability:
+          {focus === 'status' ? '> ' : '  '}Availability:
         </Text>
         <Box marginLeft={4}>
           {STATUS_OPTIONS.map(opt => (
@@ -88,10 +84,9 @@ export default function FilterPanel({ filter, onApply, onCancel }: FilterPanelPr
         </Box>
       </Box>
 
-      {/* Max price */}
       <Box flexDirection="column" marginBottom={1}>
         <Text {...fieldStyle('maxPrice')}>
-          {focus === 'maxPrice' ? '▶ ' : '  '}Max Price ($):
+          {focus === 'maxPrice' ? '> ' : '  '}Max Price ($):
         </Text>
         <Box marginLeft={4}>
           {focus === 'maxPrice' ? (
@@ -106,10 +101,9 @@ export default function FilterPanel({ filter, onApply, onCancel }: FilterPanelPr
         </Box>
       </Box>
 
-      {/* Min SEO */}
       <Box flexDirection="column" marginBottom={1}>
         <Text {...fieldStyle('minSeo')}>
-          {focus === 'minSeo' ? '▶ ' : '  '}Min SEO Score (0–100):
+          {focus === 'minSeo' ? '> ' : '  '}Min SEO Score (0–100):
         </Text>
         <Box marginLeft={4}>
           {focus === 'minSeo' ? (

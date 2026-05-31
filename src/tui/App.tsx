@@ -1,22 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
-import type { CheckResult, FilterConfig, SortConfig, PipelineOptions } from '../types.js';
+import type { CheckResult, FilterConfig, SortConfig, ColumnConfig, PipelineOptions } from '../types.js';
 import { processDomains, applyFilter, applySort } from '../pipeline/index.js';
 import DomainTable from './components/DomainTable.js';
 import FilterPanel from './components/FilterPanel.js';
 import SortPanel from './components/SortPanel.js';
 import ExportModal from './components/ExportModal.js';
+import ColumnPanel from './components/ColumnPanel.js';
 import DetailView from './components/DetailView.js';
 import DomainInput from './components/DomainInput.js';
 import StatusBar from './components/StatusBar.js';
 import Spinner from './components/Spinner.js';
 
-type AppMode = 'input' | 'processing' | 'results' | 'filter' | 'sort' | 'export' | 'detail';
+type AppMode = 'input' | 'processing' | 'results' | 'filter' | 'sort' | 'export' | 'columns' | 'detail';
 
 type ExportFormat = 'csv' | 'excel' | 'json' | 'sheets';
 
 const DEFAULT_FILTER: FilterConfig = { status: 'all', maxPrice: null, minSeo: null };
 const DEFAULT_SORT: SortConfig = { primary: { field: 'seo', direction: 'asc' } };
+const DEFAULT_COLUMNS: ColumnConfig = { price: true, seo: true, registered: false };
 
 interface AppProps {
   initialDomains?: string[];
@@ -26,20 +28,23 @@ interface AppProps {
 export default function App({ initialDomains = [], pipelineOptions = {} }: AppProps) {
   const { exit } = useApp();
   const [mode, setMode] = useState<AppMode>(initialDomains.length > 0 ? 'processing' : 'input');
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const [allResults, setAllResults] = useState<CheckResult[]>([]);
   const [checkingDomains, setCheckingDomains] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [filter, setFilter] = useState<FilterConfig>(DEFAULT_FILTER);
   const [sort, setSort] = useState<SortConfig>(DEFAULT_SORT);
+  const [columns, setColumns] = useState<ColumnConfig>(DEFAULT_COLUMNS);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const displayResults = applySort(applyFilter(allResults, filter), sort);
 
-  const startProcessing = useCallback(async (domains: string[]) => {
+  const startProcessing = useCallback(async (domains: string[], appendMode = false) => {
     setMode('processing');
-    setAllResults([]);
+    if (!appendMode) setAllResults([]);
     setCheckingDomains(new Set(domains));
     setProgress({ done: 0, total: domains.length });
 
@@ -102,7 +107,7 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
   }, [displayResults]);
 
   useInput((input, key) => {
-    if (mode !== 'results') return;
+    if (modeRef.current !== 'results') return;
 
     if (input === 'q' || (key.ctrl && input === 'c')) {
       exit();
@@ -111,6 +116,7 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
 
     if (input === 'f') { setMode('filter'); return; }
     if (input === 's') { setMode('sort'); return; }
+    if (input === 'c') { setMode('columns'); return; }
     if (input === 'x') { setMode('export'); return; }
     if (input === 'i') { setMode('input'); return; }
 
@@ -135,12 +141,14 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
     if (input === 'G') setSelectedIndex(displayResults.length - 1);
   });
 
-  // Header bar
   const Header = () => (
     <Box justifyContent="space-between" marginBottom={1}>
       <Text bold color="cyan">DomainHunter</Text>
       <Box>
-        <Text color="gray">[f] filter  [s] sort  [x] export  [q] quit</Text>
+        {mode === 'detail'
+          ? <Text color="gray">[Esc/Enter] back</Text>
+          : <Text color="gray">[f] filter  [s] sort  [c] columns  [x] export  [q] quit</Text>
+        }
       </Box>
     </Box>
   );
@@ -148,9 +156,12 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
   if (mode === 'input') {
     return (
       <DomainInput
-        onSubmit={startProcessing}
+        onSubmit={allResults.length > 0
+          ? (domains) => startProcessing(domains, true)
+          : startProcessing}
         onCancel={allResults.length > 0 ? () => setMode('results') : undefined}
         showCancel={allResults.length > 0}
+        existingDomains={allResults.map(r => ({ name: r.domain.name, status: r.status }))}
       />
     );
   }
@@ -176,13 +187,6 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
         )}
       </Box>
     );
-  }
-
-  if (mode === 'detail') {
-    const selected = displayResults[selectedIndex];
-    if (selected) {
-      return <DetailView result={selected} onBack={() => setMode('results')} />;
-    }
   }
 
   return (
@@ -212,6 +216,21 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
         />
       )}
 
+      {mode === 'columns' && (
+        <ColumnPanel
+          columns={columns}
+          onApply={c => { setColumns(c); setMode('results'); }}
+          onCancel={() => setMode('results')}
+        />
+      )}
+
+      {mode === 'detail' && (() => {
+        const selected = displayResults[selectedIndex];
+        return selected
+          ? <DetailView result={selected} onBack={() => setMode('results')} />
+          : null;
+      })()}
+
       {mode === 'results' && (
         <>
           {(filter.status !== 'all' || filter.maxPrice != null || filter.minSeo != null) && (
@@ -229,6 +248,7 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
             checkingDomains={checkingDomains}
             selectedIndex={selectedIndex}
             visibleCount={Math.max(5, (process.stdout.rows ?? 24) - 10)}
+            columns={columns}
           />
         </>
       )}

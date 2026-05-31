@@ -35,8 +35,9 @@ async function exportResults(
 }
 
 function printTable(results: Parameters<typeof applyFilter>[0]): void {
-  const COL1 = 30, COL2 = 12, COL3 = 10, COL4 = 8;
-  const hr = '─'.repeat(COL1 + COL2 + COL3 + COL4 + 9);
+  const COL1 = 30, COL2 = 12, COL3 = 10, COL4 = 8, COL5 = 12;
+  const hasRegistered = results.some(r => r.whois?.created);
+  const hr = '─'.repeat(COL1 + COL2 + COL3 + COL4 + 9 + (hasRegistered ? COL5 + 3 : 0));
   const pad = (s: string, n: number) => s.length > n ? s.slice(0, n - 1) + '…' : s.padEnd(n);
 
   console.log(hr);
@@ -44,16 +45,12 @@ function printTable(results: Parameters<typeof applyFilter>[0]): void {
     pad('Domain', COL1) + ' │ ' +
     pad('Status', COL2) + ' │ ' +
     pad('Price', COL3) + ' │ ' +
-    'SEO'
+    pad('SEO', COL4) +
+    (hasRegistered ? ' │ ' + 'Registered' : '')
   );
   console.log(hr);
 
   for (const r of results) {
-    const statusStr =
-      r.status === 'available' ? chalk.green('✓ Available') :
-      r.status === 'taken' ? chalk.red('✗ Taken') :
-      chalk.gray('? Unknown');
-
     const priceStr = getBestPrice(r);
     const score = r.seoScore.total;
     const scoreStr = score >= 80
@@ -61,22 +58,29 @@ function printTable(results: Parameters<typeof applyFilter>[0]): void {
       : score >= 60
         ? chalk.yellow(`${score}/100`)
         : chalk.red(`${score}/100`);
+    const registeredStr = hasRegistered ? (r.whois?.created?.slice(0, 10) ?? '—') : '';
 
+    // Print plain version first (for cursor-up rewrite trick)
+    const statusLabel = r.status === 'available' ? '✓ Available' : r.status === 'taken' ? '✗ Taken' : '? Unknown';
     console.log(
       pad(r.domain.name, COL1) + ' │ ' +
-      pad(r.status === 'available' ? '✓ Available' : r.status === 'taken' ? '✗ Taken' : '? Unknown', COL2) + ' │ ' +
+      pad(statusLabel, COL2) + ' │ ' +
       pad(priceStr, COL3) + ' │ ' +
-      scoreStr
+      pad(`${score}/100`, COL4) +
+      (hasRegistered ? ' │ ' + pad(registeredStr, COL5) : '')
     );
 
-    // Override domain column with plain text, status with color
-    process.stdout.write('\x1B[1A'); // Move up one line
+    // Rewrite with color
+    process.stdout.write('\x1B[1A');
     process.stdout.write(
       chalk.white(pad(r.domain.name, COL1)) + ' │ ' +
       (r.status === 'available' ? chalk.green(pad('✓ Available', COL2)) :
        r.status === 'taken' ? chalk.red(pad('✗ Taken', COL2)) :
        chalk.gray(pad('? Unknown', COL2))) +
-      ' │ ' + chalk.cyan(pad(priceStr, COL3)) + ' │ ' + scoreStr + '\n'
+      ' │ ' + chalk.cyan(pad(priceStr, COL3)) +
+      ' │ ' + scoreStr +
+      (hasRegistered ? ' │ ' + chalk.gray(pad(registeredStr, COL5)) : '') +
+      '\n'
     );
   }
 

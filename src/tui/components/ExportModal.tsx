@@ -68,7 +68,7 @@ export default function ExportModal({ onExport, onCancel }: ExportModalProps) {
 
       <Box flexDirection="column" marginBottom={1}>
         <Text color={focus === 'format' ? 'cyan' : 'white'}>
-          {focus === 'format' ? '▶ ' : '  '}Format:
+          {focus === 'format' ? '> ' : '  '}Format:
         </Text>
         <Box marginLeft={4}>
           {FORMATS.map((f, i) => (
@@ -83,7 +83,7 @@ export default function ExportModal({ onExport, onCancel }: ExportModalProps) {
 
       <Box flexDirection="column">
         <Text color={focus === 'path' ? 'cyan' : 'white'}>
-          {focus === 'path' ? '▶ ' : '  '}
+          {focus === 'path' ? '> ' : '  '}
           {selectedFormat.value === 'sheets' ? 'Spreadsheet:' : 'Output file:'}
         </Text>
         <Box marginLeft={4}>

@@ -78,6 +78,12 @@ export interface PipelineOptions {
   skipPricing?: boolean;
 }
 
+export interface ColumnConfig {
+  price: boolean;
+  seo: boolean;
+  registered: boolean;
+}
+
 export type PipelineEvent =
   | { type: 'start'; total: number }
   | { type: 'progress'; domain: string; done: number; total: number }
