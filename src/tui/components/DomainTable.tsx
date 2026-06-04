@@ -9,8 +9,8 @@ const COL_STATUS = 12;
 const COL_PRICE = 11;
 const COL_SEO = 10;
 const COL_REGISTERED = 12;
-// SEO column renders: seoBar(8) + ' ' + score padded(3) = 12 visible chars
-const SEO_DISPLAY = 12;
+// SEO column renders: seoBar(8) + ' ' + score padded(3) + ' ' = 13 visible chars
+const SEO_DISPLAY = 13;
 
 function pad(str: string, len: number): string {
   if (str.length > len) return str.slice(0, len - 1) + '…';
@@ -98,7 +98,7 @@ function DomainRow({ result, isSelected, isChecking, columns }: RowProps) {
         <>
           {divider}
           <Text color={isSelected ? 'black' : seoColor(score)} backgroundColor={bg}>
-            {seoBar(score)} {String(score).padStart(3)}
+            {seoBar(score)} {String(score).padStart(3)}{' '}
           </Text>
         </>
       )}

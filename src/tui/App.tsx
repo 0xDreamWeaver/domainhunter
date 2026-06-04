@@ -30,6 +30,15 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
   const [mode, setMode] = useState<AppMode>(initialDomains.length > 0 ? 'processing' : 'input');
   const modeRef = useRef(mode);
   modeRef.current = mode;
+
+  // Track terminal size for full-height rendering (eliminates artifacts on mode switch).
+  const [rows, setRows] = useState(process.stdout.rows ?? 24);
+  useEffect(() => {
+    const onResize = () => setRows(process.stdout.rows ?? 24);
+    process.stdout.on('resize', onResize);
+    return () => { process.stdout.off('resize', onResize); };
+  }, []);
+
   const [allResults, setAllResults] = useState<CheckResult[]>([]);
   const [checkingDomains, setCheckingDomains] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -75,7 +84,6 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
     });
   }, [pipelineOptions]);
 
-  // Auto-start if domains provided
   useEffect(() => {
     if (initialDomains.length > 0) {
       startProcessing(initialDomains);
@@ -106,6 +114,17 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
     }
   }, [displayResults]);
 
+  // Timestamp of last DetailView exit — used to block Enter from immediately
+  // re-opening the view due to terminal key auto-repeat.
+  const detailExitedAtRef = useRef(0);
+
+  // Stable back-to-results callback — memoized so DetailView's useInput
+  // effect does not re-register on every render during live checking.
+  const handleDetailBack = useCallback(() => {
+    detailExitedAtRef.current = Date.now();
+    setMode('results');
+  }, []);
+
   useInput((input, key) => {
     if (modeRef.current !== 'results') return;
 
@@ -121,6 +140,7 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
     if (input === 'i') { setMode('input'); return; }
 
     if ((key.return || input === 'l') && displayResults.length > 0) {
+      if (Date.now() - detailExitedAtRef.current < 300) return;
       setMode('detail');
       return;
     }
@@ -153,22 +173,27 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
     </Box>
   );
 
+  // visibleCount leaves room for header (2), status bar (1), and some padding.
+  const visibleCount = Math.max(5, rows - 10);
+
   if (mode === 'input') {
     return (
-      <DomainInput
-        onSubmit={allResults.length > 0
-          ? (domains) => startProcessing(domains, true)
-          : startProcessing}
-        onCancel={allResults.length > 0 ? () => setMode('results') : undefined}
-        showCancel={allResults.length > 0}
-        existingDomains={allResults.map(r => ({ name: r.domain.name, status: r.status }))}
-      />
+      <Box flexDirection="column" height={rows}>
+        <DomainInput
+          onSubmit={allResults.length > 0
+            ? (domains) => startProcessing(domains, true)
+            : startProcessing}
+          onCancel={allResults.length > 0 ? () => setMode('results') : undefined}
+          showCancel={allResults.length > 0}
+          existingDomains={allResults.map(r => ({ name: r.domain.name, status: r.status }))}
+        />
+      </Box>
     );
   }
 
   if (mode === 'processing') {
     return (
-      <Box flexDirection="column" paddingX={2} paddingY={1}>
+      <Box flexDirection="column" height={rows} paddingX={2} paddingY={1}>
         <Header />
         <Box>
           <Spinner label={`Checking domains… ${progress.done}/${progress.total}`} />
@@ -189,8 +214,10 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
     );
   }
 
+  const selectedResult = displayResults[selectedIndex];
+
   return (
-    <Box flexDirection="column" paddingX={1}>
+    <Box flexDirection="column" height={rows} paddingX={1}>
       <Header />
 
       {mode === 'filter' && (
@@ -224,12 +251,9 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
         />
       )}
 
-      {mode === 'detail' && (() => {
-        const selected = displayResults[selectedIndex];
-        return selected
-          ? <DetailView result={selected} onBack={() => setMode('results')} />
-          : null;
-      })()}
+      {mode === 'detail' && selectedResult && (
+        <DetailView result={selectedResult} onBack={handleDetailBack} />
+      )}
 
       {mode === 'results' && (
         <>
@@ -247,7 +271,7 @@ export default function App({ initialDomains = [], pipelineOptions = {} }: AppPr
             results={displayResults}
             checkingDomains={checkingDomains}
             selectedIndex={selectedIndex}
-            visibleCount={Math.max(5, (process.stdout.rows ?? 24) - 10)}
+            visibleCount={visibleCount}
             columns={columns}
           />
         </>
